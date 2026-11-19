@@ -87,11 +87,13 @@ mass and mounting position untouched, and the rocket's mass and geometry identic
 step. Forces and moments:
 
 - thrust along the body axis from the sampled thrust curve, with propellant mass burned
-  linearly over the burn time;
+  in proportion to the impulse already delivered and the pitch inertia following the
+  emptying motor;
 - gravity;
 - drag from an exponential atmosphere (scale height 8.5 km) with a simple transonic drag rise;
-- a fin normal force applied at the centre of pressure, which weathercocks the rocket into
-  its velocity vector, plus pitch damping;
+- a fin normal force applied at the centre of pressure — slender-body slope blending into
+  flat-plate crossflow at large angles — which weathercocks the rocket into its velocity
+  vector, plus pitch damping;
 - a pad hold that releases the rocket only when thrust along the rail exceeds its weight.
 
 There is no guidance, no autopilot, no gimbal and no parachute. A flight ends at ground
@@ -101,7 +103,7 @@ impact. `docs/PHYSICS.md` lists the equations and the assumptions behind the coe
 
 ```bash
 python -m rocket_sim --self-test   # headless physics checks, prints a summary and exits
-python -m pytest                   # 36 tests: config, motor validation, flight, UI smoke test
+python -m pytest                   # 46 tests: config, motor, flight laws, UI smoke test
 ```
 
 `--self-test` reports the fixed hardware, the thrust-curve integral, the complete flight

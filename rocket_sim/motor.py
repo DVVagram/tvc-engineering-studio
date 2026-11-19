@@ -50,6 +50,7 @@ class ThrustCurve:
 
     times: np.ndarray
     thrusts: np.ndarray
+    cumulative_impulse: np.ndarray  # N s delivered from ignition up to each sample
     burn_time: float
     total_impulse: float
     mean_thrust: float
@@ -62,6 +63,14 @@ class ThrustCurve:
         if time < 0.0 or time > self.burn_time:
             return 0.0
         return float(np.interp(time, self.times, self.thrusts))
+
+    def impulse_delivered(self, time: float) -> float:
+        """Impulse burned by ``time``; drives propellant depletion."""
+        if time <= 0.0:
+            return 0.0
+        if time >= self.burn_time:
+            return self.total_impulse
+        return float(np.interp(time, self.times, self.cumulative_impulse))
 
     def integrated_impulse(self) -> float:
         return float(np.sum(0.5 * (self.thrusts[1:] + self.thrusts[:-1])
@@ -167,10 +176,15 @@ class MotorPerformance:
         if unit_impulse <= 0.0:  # defensive: validation should prevent this
             raise MotorSpecError(["The requested curve has no positive thrust."])
         thrusts = thrusts * (self.total_impulse / unit_impulse)
+        cumulative = np.concatenate([
+            [0.0],
+            np.cumsum(0.5 * (thrusts[1:] + thrusts[:-1]) * np.diff(times)),
+        ])
 
         return ThrustCurve(
             times=times,
             thrusts=thrusts,
+            cumulative_impulse=cumulative,
             burn_time=self.burn_time,
             total_impulse=float(np.sum(0.5 * (thrusts[1:] + thrusts[:-1])
                                        * np.diff(times))),

@@ -45,6 +45,7 @@ class RocketConfig:
 
     drag_coefficient: float = 0.45  # subsonic, referenced to the body cross-section
     fin_normal_force_slope: float = 10.0  # per radian, referenced to the body area
+    fin_crossflow_drag: float = 1.2  # flat-plate normal coefficient at 90 degrees
     pitch_damping_coefficient: float = 6.0
 
     launch_tilt_deg: float = 4.0  # fixed launch-rail tilt; no wind is modelled

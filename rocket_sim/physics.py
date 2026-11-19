@@ -224,11 +224,18 @@ class Simulation:
 
     # --------------------------------------------------------------------- physics
     def _mass_at(self, time: float) -> float:
-        if time >= self.curve.burn_time:
+        """Propellant is consumed in proportion to the impulse actually delivered.
+
+        A progressive curve therefore burns mass more slowly at ignition than a
+        regressive one with the same total impulse, which is what the motor really does.
+        """
+        total = self.curve.total_impulse
+        if total <= 0.0:
             return DRY_MASS
-        fraction_left = 1.0 - time / self.curve.burn_time
-        return self.motor.casing_mass + self.rocket.structural_mass + \
-            self.motor.propellant_mass * fraction_left
+        burned = min(total, max(0.0, self.curve.impulse_delivered(time)))
+        remaining = 1.0 - burned / total
+        return (self.rocket.structural_mass + self.motor.casing_mass
+                + self.motor.propellant_mass * remaining)
 
     def _derivatives(self, y: np.ndarray, time: float) -> np.ndarray:
         position = y[0:3]
@@ -241,6 +248,7 @@ class Simulation:
         mass = max(self._mass_at(time), 1e-9)
 
         speed = float(np.linalg.norm(velocity))
+        # Atmosphere referenced to the launch site (the pad is at 0 m).
         altitude = float(position[2]) - self.rocket.tail_offset
         rho = air_density(altitude)
         dynamic_pressure = 0.5 * rho * speed * speed
@@ -257,14 +265,18 @@ class Simulation:
             lateral = velocity - float(np.dot(velocity, axis)) * axis
             lateral_speed = float(np.linalg.norm(lateral))
             if lateral_speed > 1e-9:
-                angle_of_attack_sin = min(1.0, lateral_speed / max(speed, 1e-12))
-                normal = (
-                    dynamic_pressure
-                    * self.rocket.reference_area
-                    * self.rocket.fin_normal_force_slope
-                    * angle_of_attack_sin
-                    * (-lateral / lateral_speed)
+                # Slender-body slope at small angles, blending into flat-plate crossflow
+                # at large angles of attack (the apogee pitch-over reaches both).
+                sin_alpha = min(1.0, lateral_speed / max(speed, 1e-12))
+                cos_alpha = math.sqrt(max(0.0, 1.0 - sin_alpha * sin_alpha))
+                normal_coefficient = (
+                    self.rocket.fin_normal_force_slope * sin_alpha * cos_alpha
+                    + self.rocket.fin_crossflow_drag * sin_alpha * sin_alpha
                 )
+                normal = (dynamic_pressure
+                          * self.rocket.reference_area
+                          * normal_coefficient
+                          * (-lateral / lateral_speed))
                 force += normal
                 lever_arm = -self.rocket.static_margin * axis  # centre of pressure
                 torque += np.cross(lever_arm, normal)
@@ -277,7 +289,10 @@ class Simulation:
                 torque -= damping * omega_perp
 
         acceleration = force / mass
-        angular_acceleration = torque / INERTIA
+        # The pitch inertia falls as the propellant leaves the motor.
+        inertia = max(self.rocket.transverse_inertia(mass - self.rocket.structural_mass),
+                      0.01)
+        angular_acceleration = torque / inertia
         attitude_rate = 0.5 * quat_mul(np.array([0.0, *omega]), attitude)
         return np.concatenate([velocity, acceleration, attitude_rate, angular_acceleration])
 
