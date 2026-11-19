@@ -5,7 +5,25 @@ no control system and no rocket designer: the airframe and motor are constants, 
 things you can change are the motor's *performance* numbers. Change them and watch the same
 rocket fly differently.
 
-## Run it
+## Download (pre-release)
+
+The simulator has its own pre-release, separate from the TVC project's releases.
+
+- **Windows 10/11** —
+  [`Static-Rocket-Simulator-0.1.0-setup.exe`](https://github.com/DVVagram/tvc-engineering-studio/releases/download/static-rocket-simulator-v0.1.0/Static-Rocket-Simulator-0.1.0-setup.exe)
+  (47 MB). Per-user install, no administrator rights, Start-menu shortcut. The build is
+  unsigned: SmartScreen asks for **More info → Run anyway**.
+- **macOS 11+** —
+  [`Static-Rocket-Simulator-0.1.0-macos.zip`](https://github.com/DVVagram/tvc-engineering-studio/releases/download/static-rocket-simulator-v0.1.0/Static-Rocket-Simulator-0.1.0-macos.zip)
+  (52 MB). Unzip and drag `Static Rocket Flight Simulator.app` into Applications. The bundle
+  is built for x86_64 and also runs on Apple silicon through Rosetta 2. It is unsigned and
+  not notarised, so the first launch needs right-click → **Open** → **Open**, or
+  `xattr -dr com.apple.quarantine "Static Rocket Flight Simulator.app"` once.
+
+Both packages come from `.github/workflows/build.yml`: the macOS bundle is built, self-tested
+and packaged on a macOS runner, not cross-compiled from Windows.
+
+## Run from source
 
 Windows:
 
