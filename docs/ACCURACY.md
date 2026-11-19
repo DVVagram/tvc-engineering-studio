@@ -58,6 +58,13 @@ The suite tests *behaviour and closed-form results*, not saved output snapshots.
    slope uses the standard Barrowman semispan form. It is labelled approximate and does not
    replace wind-tunnel or CFD data. Full CFD is not implemented.
 
+   The recovery parachute is a quasi-steady drag applied at the nose attachment point using
+   the canopy `Cd·A` from the flight configuration. Because the force is applied away from
+   the centre of mass, a deployment pulls the body into the relative wind: the tilt trace
+   shows a short deployment transient (tens of degrees when the vehicle still has lateral
+   drift at apogee) before settling nose-up for the descent. Canopy inflation time, line
+   dynamics and canopy pendulum motion are not modelled.
+
 5. **Static margin convention.** Body `z` is measured from the tail datum. The application
    reports `static_margin = CG_z − CP_z`; positive means the CG is ahead of the CP and the
    vehicle is passively stable. The flight model's restoring moment is checked against this

@@ -192,6 +192,11 @@ class FlightSimulator:
         self.config = config or FlightConfig()
         self.aero_config = aero_config
         self.aero = aero_model or make_aero(aero_config, stack)
+        # The canopy pulls on the rocket at the forward end of the stack, not at the centre
+        # of mass; that offset is what turns the body to hang under the chute.
+        forward = max((e.start + e.length for e in (stack or [])),
+                      default=float(rocket.reference_length))
+        self.chute_attachment = vec3(0.0, 0.0, forward)
         self.atmosphere = Atmosphere(self.config.wind, self.config.gust_std)
         self.pitch_servo = pitch_servo
         self.yaw_servo = yaw_servo
@@ -353,19 +358,31 @@ class FlightSimulator:
             if np.linalg.norm(offset) > 1e-9:
                 pass
 
+        force_world = attitude.rotate(force_body)
+        # Euler's equation below is written in the body frame, so the moment stays in the
+        # body frame (it is *not* rotated with the attitude).
+        moment = moment_body
+
         if self.state.parachute_deployed and float(velocity[2]) < 0:
-            speed = float(np.linalg.norm(rel_velocity))
+            # Quasi-steady canopy drag at the riser attachment: the attachment point moves
+            # with the body rate, so the same term supplies the restoring moment that makes
+            # the vehicle hang under the canopy and the damping that settles the swing.
+            r_chute_body = as_vec3(self.chute_attachment) - as_vec3(mass_props.com)
+            r_chute_world = attitude.rotate(r_chute_body)
+            omega_world = attitude.rotate(as_vec3(omega_body))
+            v_site = as_vec3(rel_velocity) + np.cross(omega_world, r_chute_world)
+            speed = float(np.linalg.norm(v_site))
             if speed > 1e-6:
                 drag = 0.5 * density * speed * speed * self.config.parachute_cd * self.config.parachute_area
-                force_world_chute = -(rel_velocity / speed) * drag
-                force_body = force_body + attitude.inverse().rotate(force_world_chute)
+                force_chute = -(v_site / speed) * drag
+                force_world = force_world + force_chute
+                moment = moment + attitude.rotate_inverse(
+                    np.cross(r_chute_world, force_chute))
 
-        force_world = attitude.rotate(force_body)
         force_world = force_world + vec3(0, 0, -GRAVITY * mass_props.mass)
-        moment_world = attitude.rotate(moment_body)
-        return force_world, moment_world, aero, atm, thrust
+        return force_world, moment, aero, atm, thrust
 
-    def _derivative(self, t, position, velocity, attitude, omega_body, mass_props, force_world, moment_world):
+    def _derivative(self, t, position, velocity, attitude, omega_body, mass_props, force_world, moment_body):
         mass = max(mass_props.mass, 1e-9)
         acceleration = force_world / mass
         I = np.asarray(mass_props.inertia, dtype=float)
@@ -378,7 +395,7 @@ class FlightSimulator:
         except np.linalg.LinAlgError:
             raise SimulationError("inertia tensor is singular; check assembly mass properties")
         omega = as_vec3(omega_body)
-        angular_acc = I_inv @ (as_vec3(moment_world) - np.cross(omega, I @ omega) - I_dot @ omega)
+        angular_acc = I_inv @ (as_vec3(moment_body) - np.cross(omega, I @ omega) - I_dot @ omega)
         dq = attitude.derivative(omega)
         return acceleration, angular_acc, dq
 

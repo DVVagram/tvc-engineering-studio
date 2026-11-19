@@ -87,5 +87,11 @@ def test_guided_flight_reaches_plausible_apogee(sample_project):
                           config, rocket.stack, control=sample_project.control)
     result = sim.run(20.0)
     assert 120.0 < result.summary["apogee_m"] < 400.0
-    assert result.summary["max_tilt_deg"] < 45.0
+    # Guidance authority is a powered/coast property. The canopy pulls the body into the
+    # relative wind at apogee (a deliberate, modelled manoeuvre), so descent is checked by
+    # the settling assertion below rather than folded into the guided tilt limit.
+    guided = [row["tilt_deg"] for row in result.telemetry
+              if row["phase"] in ("powered", "coast")]
+    assert guided and max(guided) < 45.0
+    assert result.telemetry[-1]["tilt_deg"] < 15.0
     assert result.summary["landed"] in (True, False)

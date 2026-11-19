@@ -67,7 +67,7 @@ components and their configured properties, never from a hand-entered whole-rock
 | `physics.atmosphere` | ISA atmosphere + wind | — |
 | `physics.propulsion` | Thrust curves with provenance and mass flow | — |
 | `physics.aero` | Coefficient model, Barrowman CP estimate, damping, uncertainty flags | core.math3d |
-| `physics.flight` | 6-DOF RK4 (quaternion attitude, changing mass/inertia) | physics.*, assembly |
+| `physics.flight` | 6-DOF RK4 (quaternion attitude, body-frame moments, changing mass/inertia), parachute drag at the nose attachment | physics.*, assembly |
 | `viz.*` | GL viewport, picking, section/explode, overlays, playback | pyqtgraph.opengl |
 | `project.*` | Versioned project schema, JSON save/load, migration, library store | everything (serialization only) |
 | `analysis.reports` | Engineering reports, comparisons, clearance/collision/fastener breakdowns | assembly, mech |
