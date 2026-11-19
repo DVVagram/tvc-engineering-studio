@@ -33,8 +33,21 @@ it. The same caveats apply: it is unsigned, and SmartScreen will ask you to conf
 
 ### macOS
 
-The source runs on macOS 11 or newer (Apple silicon and Intel); Open CASCADE publishes
-wheels for both, so nothing needs compiling.
+Download
+[`TVC-Engineering-Studio-macos.zip`](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-macos.zip),
+extract it, and drag `TVC Engineering Studio.app` wherever you keep applications. The
+bundle is built on macOS 15 for x86_64 and also runs on Apple silicon through Rosetta 2.
+It needs macOS 11 or newer.
+
+It is unsigned and not notarised, so Gatekeeper will refuse the first launch: right-click
+the app → **Open** → **Open**, or clear the quarantine flag once:
+
+```bash
+xattr -dr com.apple.quarantine "TVC Engineering Studio.app"
+```
+
+From source (macOS 11+, Apple silicon or Intel; Open CASCADE publishes wheels for both,
+so nothing needs compiling):
 
 ```bash
 python3 -m venv .venv
@@ -42,11 +55,9 @@ python3 -m venv .venv
 .venv/bin/python -m tvc_studio
 ```
 
-`packaging/build_macos.sh` builds a `TVC Engineering Studio.app` bundle with PyInstaller
-and zips it with `ditto`. The bundle is unsigned and not notarised, so the first launch
-needs right-click → **Open** (or `xattr -dr com.apple.quarantine "TVC Engineering Studio.app"
-first). The `macos-arm64` artifact from the GitHub Actions build is the same bundle,
-produced on a real macOS runner.
+`packaging/build_macos.sh` reproduces the bundle locally with PyInstaller and zips it with
+`ditto`; `.github/workflows/build.yml` runs its self-test and validation suite on macOS and
+publishes the archive.
 
 ## What this build does
 
@@ -65,7 +76,7 @@ produced on a real macOS runner.
 | 11 | 3-D viewport: selection, exploded/section/transparent/wireframe, animation driven by simulation state | Implemented |
 | 12 | Telemetry, engineering graphs, analysis reports, configuration comparison | Implemented |
 | 13 | Automated validation test suite (see `docs/ACCURACY.md`) | Implemented |
-| 14 | Windows packaging script (PyInstaller) + installer recipe | Scripted, not signed |
+| 14 | Packaging: PyInstaller bundles for Windows and macOS, Inno Setup installer, GitHub Actions builds | Scripted, not signed |
 | 15 | Nonlinear FEA of thread forming / plastic deformation | **Not implemented** — documented model boundary |
 | 16 | Geometry-derived aerodynamic coefficient prediction beyond Barrowman/CP estimate | **Partial** — documented as approximate |
 
