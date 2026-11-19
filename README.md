@@ -10,8 +10,9 @@ no subscription, no telemetry. Projects are local files.
 
 ## Download and install (Windows 10/11, no Python needed)
 
-1. Download `TVC-Engineering-Studio-0.1.0-setup.exe` from the
-   [latest release](https://github.com/DVVagram/tvc-engineering-studio/releases/latest).
+1. Download
+   [`TVC-Engineering-Studio-0.1.0-setup.exe` (103 MB)](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-0.1.0-setup.exe)
+   or open the [release page](https://github.com/DVVagram/tvc-engineering-studio/releases/latest).
 2. Run it. Windows SmartScreen will warn because the build is not code-signed:
    choose **More info → Run anyway**.
 3. It installs for the current user (no administrator rights, no background services,
