@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Packaging / distribution
+build/
+dist/
+*.spec.bak
+installer/Output/
+installer/*.exe
+
+# Runtime output
+*.log
+telemetry/
+exports/
+*.tvcproj.bak
+
+# Freebuff workspace metadata
+.freebuff/project-id
+.freebuff/.gitignore
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
