@@ -11,6 +11,10 @@ AppId={{8E2E1C1A-6F64-4C55-9E77-5B6C2F0C1A11}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=TVC Engineering Studio contributors
+AppPublisherURL=https://github.com/DVVagram/tvc-engineering-studio
+AppSupportURL=https://github.com/DVVagram/tvc-engineering-studio/issues
+AppUpdatesURL=https://github.com/DVVagram/tvc-engineering-studio/releases
+AppVerName={#AppName} {#AppVersion}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
@@ -22,6 +26,14 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
+CloseApplications=yes
+RestartApplications=no
+VersionInfoCompany=TVC Engineering Studio contributors
+VersionInfoDescription={#AppName} installer
+VersionInfoProductName={#AppName}
+VersionInfoProductVersion={#AppVersion}
+VersionInfoVersion={#AppVersion}
+UninstallDisplayName={#AppName} {#AppVersion}
 UninstallDisplayIcon={app}\{#AppExe}
 
 [Languages]
