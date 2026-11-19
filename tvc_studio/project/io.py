@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import tempfile
 
 from ..core.errors import ProjectFormatError
@@ -85,9 +86,19 @@ class JsonProjectStore:
         return path
 
 
+def config_directory() -> str:
+    """Per-user configuration directory in the platform's native location."""
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+    elif sys.platform == "darwin":
+        base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
+    else:
+        base = os.environ.get("XDG_CONFIG_HOME") or os.path.join(os.path.expanduser("~"), ".config")
+    return os.path.join(base, "TVCStudio")
+
+
 def recent_files_path() -> str:
-    base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "TVCStudio", "recent.json")
+    return os.path.join(config_directory(), "recent.json")
 
 
 def load_recent_files() -> list[str]:
@@ -116,8 +127,7 @@ def remember_recent_file(path: str) -> None:
 
 
 def library_path() -> str:
-    base = os.environ.get("APPDATA") or os.path.expanduser("~")
-    return os.path.join(base, "TVCStudio", "library.json")
+    return os.path.join(config_directory(), "library.json")
 
 
 class ComponentLibraryStore:

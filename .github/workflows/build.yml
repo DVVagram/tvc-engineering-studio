@@ -1,0 +1,89 @@
+name: Build desktop app
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,packaging]"
+
+      - name: Headless self-test
+        run: python -m tvc_studio --self-test
+
+      - name: Validation suite
+        run: python -m pytest
+
+      - name: Package
+        run: |
+          python -m PyInstaller --noconfirm --clean packaging/tvc_studio.spec
+          Compress-Archive -Path "dist/TVC Engineering Studio" -DestinationPath "dist/TVC-Engineering-Studio-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TVC-Engineering-Studio-windows-x64
+          path: dist/TVC-Engineering-Studio-windows-x64.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" "dist/TVC-Engineering-Studio-windows-x64.zip" --clobber
+
+  macos:
+    name: macOS arm64
+    runs-on: macos-14
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,packaging]"
+
+      - name: Headless self-test
+        run: python -m tvc_studio --self-test
+
+      - name: Validation suite
+        run: python -m pytest
+
+      - name: Package
+        run: |
+          python -m PyInstaller --noconfirm --clean packaging/tvc_studio.spec
+          ditto -c -k --sequesterRsrc --keepParent "dist/TVC Engineering Studio.app" "dist/TVC-Engineering-Studio-macos-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TVC-Engineering-Studio-macos-arm64
+          path: dist/TVC-Engineering-Studio-macos-arm64.zip
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" "dist/TVC-Engineering-Studio-macos-arm64.zip" --clobber

@@ -3,8 +3,8 @@
 Integrated CAD → assembly → fastener → mechanical dynamics → electronics → propulsion →
 aerodynamics → 6-DOF flight simulation desktop application for Thrust Vector Control rockets.
 
-Native Windows desktop application (PySide6 + Open CASCADE). No browser, no cloud service,
-no subscription, no telemetry. Projects are local files.
+Native desktop application (PySide6 + Open CASCADE) for Windows and macOS. No browser, no
+cloud service, no subscription, no telemetry. Projects are local files.
 
 ---
 
@@ -22,6 +22,31 @@ no subscription, no telemetry. Projects are local files.
 
 Your projects are ordinary files you choose the location of; they are not stored in the
 installation folder, so uninstalling never deletes them.
+
+### Portable ZIP (no installation)
+
+Prefer not to install anything? Download
+[`TVC-Engineering-Studio-0.1.0-portable.zip` (161 MB)](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-0.1.0-portable.zip),
+extract it anywhere, and run `TVC Engineering Studio.exe` from inside the extracted
+folder. Nothing is written to the registry or the Start menu; delete the folder to remove
+it. The same caveats apply: it is unsigned, and SmartScreen will ask you to confirm.
+
+### macOS
+
+The source runs on macOS 11 or newer (Apple silicon and Intel); Open CASCADE publishes
+wheels for both, so nothing needs compiling.
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m tvc_studio
+```
+
+`packaging/build_macos.sh` builds a `TVC Engineering Studio.app` bundle with PyInstaller
+and zips it with `ditto`. The bundle is unsigned and not notarised, so the first launch
+needs right-click → **Open** (or `xattr -dr com.apple.quarantine "TVC Engineering Studio.app"
+first). The `macos-arm64` artifact from the GitHub Actions build is the same bundle,
+produced on a real macOS runner.
 
 ## What this build does
 

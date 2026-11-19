@@ -1,11 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec for TVC Engineering Studio (Windows onedir build).
+"""PyInstaller spec for TVC Engineering Studio (Windows onedir, macOS app bundle).
 
-Build with ``packaging\\build_windows.bat`` from the repository root. The OCP wheel
-contains its own OCCT DLLs, so they are collected as package binaries rather than copied
-by hand. Qt is collected by PyInstaller's bundled PySide6 hook.
+Build with ``packaging\\build_windows.bat`` on Windows or
+``packaging/build_macos.sh`` on macOS, from the repository root. The OCP wheel contains
+its own OCCT libraries, so they are collected as package binaries rather than copied by
+hand. Qt is collected by PyInstaller's bundled PySide6 hook.
 """
 
+import sys
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_all
@@ -59,3 +61,18 @@ coll = COLLECT(
     upx=False,
     name="TVC Engineering Studio",
 )
+
+if sys.platform == "darwin":
+    # macOS ships an application bundle rather than a bare folder of files.
+    app = BUNDLE(
+        coll,
+        name="TVC Engineering Studio.app",
+        bundle_identifier="com.tvcengineeringstudio.desktop",
+        info_plist={
+            "CFBundleShortVersionString": "0.1.0",
+            "CFBundleVersion": "0.1.0",
+            "LSMinimumSystemVersion": "11.0",
+            "NSHighResolutionCapable": True,
+            "NSPrincipalClass": "NSApplication",
+        },
+    )
