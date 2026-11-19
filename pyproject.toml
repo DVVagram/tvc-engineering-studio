@@ -3,16 +3,17 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tvc-engineering-studio"
+name = "static-rocket-flight-simulator"
 version = "0.1.0"
-description = "Integrated CAD, assembly, fastener, mechanical-dynamics and 6-DOF flight simulation environment for Thrust Vector Control rockets."
+description = "3D flight simulator for one fixed fin-stabilised rocket, where only the motor's performance is editable."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "TVC Engineering Studio contributors" }]
-keywords = ["CAD", "rocketry", "TVC", "simulation", "OCCT", "engineering"]
+authors = [{ name = "Static Rocket Flight Simulator contributors" }]
+keywords = ["rocketry", "simulation", "flight-dynamics", "3d", "PySide6", "pyqtgraph"]
 classifiers = [
   "Environment :: Win32 (MS Windows)",
+  "Environment :: MacOS X",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Topic :: Scientific/Engineering",
@@ -20,29 +21,23 @@ classifiers = [
 
 dependencies = [
   "numpy>=2.0",
-  "scipy>=1.11",
   "PySide6>=6.6",
   "pyqtgraph>=0.13",
   "PyOpenGL>=3.1",
-  "cadquery-ocp>=7.7",  # wheels for Windows, Linux and macOS 11+ (arm64, x86_64)
 ]
 
 [project.optional-dependencies]
-hardware = ["pyserial>=3.5"]
 dev = ["pytest>=8.0"]
 packaging = ["pyinstaller>=6.0"]
 
 [project.scripts]
-tvc-studio = "tvc_studio.app:main"
+rocket-sim = "rocket_sim.app:main"
 
 [project.gui-scripts]
-tvc-studio-gui = "tvc_studio.app:main"
+rocket-sim-gui = "rocket_sim.app:main"
 
 [tool.setuptools.packages.find]
-include = ["tvc_studio*"]
-
-[tool.setuptools.package-data]
-"tvc_studio" = ["resources/**/*", "resources/**/*.*"]
+include = ["rocket_sim*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

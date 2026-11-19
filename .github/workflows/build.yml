@@ -27,27 +27,27 @@ jobs:
           python -m pip install -e ".[dev,packaging]"
 
       - name: Headless self-test
-        run: python -m tvc_studio --self-test
+        run: python -m rocket_sim --self-test
 
       - name: Validation suite
         run: python -m pytest
 
       - name: Package
         run: |
-          python -m PyInstaller --noconfirm --clean packaging/tvc_studio.spec
-          Compress-Archive -Path "dist/TVC Engineering Studio" -DestinationPath "dist/TVC-Engineering-Studio-windows-x64.zip"
+          python -m PyInstaller --noconfirm --clean packaging/rocket_sim.spec
+          Compress-Archive -Path "dist/Static Rocket Flight Simulator" -DestinationPath "dist/Static-Rocket-Simulator-windows-x64.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TVC-Engineering-Studio-windows-x64
-          path: dist/TVC-Engineering-Studio-windows-x64.zip
+          name: Static-Rocket-Simulator-windows-x64
+          path: dist/Static-Rocket-Simulator-windows-x64.zip
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" "dist/TVC-Engineering-Studio-windows-x64.zip" --clobber
+        run: gh release upload "${GITHUB_REF_NAME}" "dist/Static-Rocket-Simulator-windows-x64.zip" --clobber
 
   macos:
     name: macOS x86_64
@@ -67,23 +67,23 @@ jobs:
           python -m pip install -e ".[dev,packaging]"
 
       - name: Headless self-test
-        run: python -m tvc_studio --self-test
+        run: python -m rocket_sim --self-test
 
       - name: Validation suite
         run: python -m pytest
 
       - name: Package
         run: |
-          python -m PyInstaller --noconfirm --clean packaging/tvc_studio.spec
-          ditto -c -k --sequesterRsrc --keepParent "dist/TVC Engineering Studio.app" "dist/TVC-Engineering-Studio-macos.zip"
+          python -m PyInstaller --noconfirm --clean packaging/rocket_sim.spec
+          ditto -c -k --sequesterRsrc --keepParent "dist/Static Rocket Flight Simulator.app" "dist/Static-Rocket-Simulator-macos.zip"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: TVC-Engineering-Studio-macos
-          path: dist/TVC-Engineering-Studio-macos.zip
+          name: Static-Rocket-Simulator-macos
+          path: dist/Static-Rocket-Simulator-macos.zip
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${GITHUB_REF_NAME}" "dist/TVC-Engineering-Studio-macos.zip" --clobber
+        run: gh release upload "${GITHUB_REF_NAME}" "dist/Static-Rocket-Simulator-macos.zip" --clobber

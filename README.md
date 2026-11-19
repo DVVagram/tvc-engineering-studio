@@ -1,162 +1,145 @@
-# TVC Engineering Studio
+# Static Rocket Flight Simulator
 
-Integrated CAD → assembly → fastener → mechanical dynamics → electronics → propulsion →
-aerodynamics → 6-DOF flight simulation desktop application for Thrust Vector Control rockets.
+A 3D flight simulator for **one fixed fin-stabilised rocket**. There is no thrust vectoring,
+no control system and no rocket designer: the airframe and motor are constants, and the only
+things you can change are the motor's *performance* numbers. Change them and watch the same
+rocket fly differently.
 
-Native desktop application (PySide6 + Open CASCADE) for Windows and macOS. No browser, no
-cloud service, no subscription, no telemetry. Projects are local files.
+## Run it
 
----
-
-## Download and install (Windows 10/11, no Python needed)
-
-1. Download
-   [`TVC-Engineering-Studio-0.1.0-setup.exe` (103 MB)](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-0.1.0-setup.exe)
-   or open the [release page](https://github.com/DVVagram/tvc-engineering-studio/releases/latest).
-2. Run it. Windows SmartScreen will warn because the build is not code-signed:
-   choose **More info → Run anyway**.
-3. It installs for the current user (no administrator rights, no background services,
-   no network access) and adds a Start-menu shortcut.
-4. Remove it later from **Settings → Apps → TVC Engineering Studio** or the Start-menu
-   entry's *Uninstall*.
-
-Your projects are ordinary files you choose the location of; they are not stored in the
-installation folder, so uninstalling never deletes them.
-
-### Portable ZIP (no installation)
-
-Prefer not to install anything? Download
-[`TVC-Engineering-Studio-0.1.0-portable.zip` (161 MB)](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-0.1.0-portable.zip),
-extract it anywhere, and run `TVC Engineering Studio.exe` from inside the extracted
-folder. Nothing is written to the registry or the Start menu; delete the folder to remove
-it. The same caveats apply: it is unsigned, and SmartScreen will ask you to confirm.
-
-### macOS
-
-Download
-[`TVC-Engineering-Studio-macos.zip`](https://github.com/DVVagram/tvc-engineering-studio/releases/latest/download/TVC-Engineering-Studio-macos.zip),
-extract it, and drag `TVC Engineering Studio.app` wherever you keep applications. The
-bundle is built on macOS 15 for x86_64 and also runs on Apple silicon through Rosetta 2.
-It needs macOS 11 or newer.
-
-It is unsigned and not notarised, so Gatekeeper will refuse the first launch: right-click
-the app → **Open** → **Open**, or clear the quarantine flag once:
-
-```bash
-xattr -dr com.apple.quarantine "TVC Engineering Studio.app"
-```
-
-From source (macOS 11+, Apple silicon or Intel; Open CASCADE publishes wheels for both,
-so nothing needs compiling):
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e ".[dev]"
-.venv/bin/python -m tvc_studio
-```
-
-`packaging/build_macos.sh` reproduces the bundle locally with PyInstaller and zips it with
-`ditto`; `.github/workflows/build.yml` runs its self-test and validation suite on macOS and
-publishes the archive.
-
-## What this build does
-
-| # | Subsystem | State |
-|---|-----------|-------|
-| 1 | Exact B-rep CAD kernel (OCCT/OCP): primitives, booleans, fillet/chamfer, extrude/revolve, STEP/IGES/STL/BREP I/O, tessellation, measurements | Implemented |
-| 2 | Parametric part documents with feature history, sketch + 2-D constraint solver, rebuild | Implemented |
-| 3 | Assembly tree with subassemblies, placement, visibility/suppression, configurations | Implemented |
-| 4 | Assembly constraint solver (mate types, DOF/over-constraint diagnostics) | Implemented |
-| 5 | Component property system: mass modes, overrides, materials, parallel-axis assembly mass properties | Implemented |
-| 6 | Fastener library, screw installation kinematics, simplified + helical threads, self-tapping model | Implemented |
-| 7 | Mechanical dynamics: rigid bodies, joints, stops, friction, backlash, contact, interference | Implemented |
-| 8 | Servo / motor / sensor hardware models with real dynamics | Implemented |
-| 9 | Flight computer, IMU simulation, SITL loop, HIL serial protocol | Implemented |
-| 10 | Propulsion (thrust-curve import with provenance), atmosphere, aero, 6-DOF flight with changing mass/inertia | Implemented |
-| 11 | 3-D viewport: selection, exploded/section/transparent/wireframe, animation driven by simulation state | Implemented |
-| 12 | Telemetry, engineering graphs, analysis reports, configuration comparison | Implemented |
-| 13 | Automated validation test suite (see `docs/ACCURACY.md`) | Implemented |
-| 14 | Packaging: PyInstaller bundles for Windows and macOS, Inno Setup installer, GitHub Actions builds | Scripted, not signed |
-| 15 | Nonlinear FEA of thread forming / plastic deformation | **Not implemented** — documented model boundary |
-| 16 | Geometry-derived aerodynamic coefficient prediction beyond Barrowman/CP estimate | **Partial** — documented as approximate |
-
-Everything else in the specification that is not listed as implemented is either
-*partial* or *planned*, and `docs/ROADMAP.md` tracks it per feature. Panels carry the
-same status glyphs (`●` implemented, `◐` partial, `○` planned, `✕` unsupported) so the
-UI never implies more capability than exists.
-
----
-
-## Install from source (developers)
-
-Requires Python 3.13 (3.11 or newer works) and about 1.5 GB of wheels.
+Windows:
 
 ```bat
 py -3.13 -m venv .venv
-.venv\Scripts\python -m pip install -e ".[dev]"
-.venv\Scripts\python -m tvc_studio
+.venv\Scripts\python -m pip install -e .
+.venv\Scripts\python -m rocket_sim
 ```
 
-`python -m tvc_studio` starts the desktop application. First launch creates an empty
-project with a starter rocket assembly you can explore.
+macOS / Linux:
 
-Optional extras:
-
-```bat
-.venv\Scripts\python -m pip install -e ".[hardware]"   :: USB serial HIL with a real Pico
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m rocket_sim
 ```
 
-## Tests
+The window opens with the rocket on the pad. Press **Start** and it flies: powered ascent,
+burnout, coast, apogee, descent and impact, with the 3D view following the simulated motion.
 
-```bat
-.venv\Scripts\python -m pytest
+## Interface
+
+- **Large 3D viewport** — orbit with the left mouse button, zoom with the wheel, pan with the
+  right mouse button. **Follow rocket** keeps the camera on the vehicle; **Reset camera**
+  returns to the pad view.
+- **Motor performance panel** — the only editable numbers in the application.
+- **Flight data** — altitude, vertical and total velocity, acceleration, flight time, thrust,
+  motor status, maximum altitude and maximum velocity, updated every frame.
+- **Flight events** — liftoff, burnout, apogee and ground impact with their times.
+- **Controls** — Start, Pause, Resume, Reset and Restart. Reset returns to the exact initial
+  state, so the same motor flies the identical trajectory every time.
+
+## The rocket and motor are fixed
+
+All physical values live in `rocket_sim/config.py` as frozen dataclasses. Nothing in the
+interface reads or writes them, and changing motor performance cannot change them.
+
+| Rocket | Value |
+|---|---|
+| Body | 1.20 m long, 75 mm diameter |
+| Nose | 200 mm ogive |
+| Fins | 4 fixed trapezoidal fins, 160/60 mm chord, 90 mm span, 60 mm sweep |
+| Structure mass | 615 g |
+| Centre of gravity | 620 mm from the nose tip |
+| Centre of pressure | 820 mm from the nose tip (static margin 2.7 calibers) |
+| Launch tilt | 4° (fixed; no wind is modelled) |
+
+| Motor | Value |
+|---|---|
+| Case | 29 mm diameter, 100 mm long |
+| Casing mass | 45 g |
+| Propellant mass | 30 g |
+| Mount | Fixed, 12 mm ahead of the tail, one motor |
+
+## The only editable values: motor performance
+
+| Input | Meaning |
+|---|---|
+| Designation | Optional label shown with the run |
+| Average thrust | N |
+| Maximum thrust | N |
+| Total impulse | N·s |
+| Burn time | s |
+| Curve shape | Neutral, progressive or regressive |
+
+The thrust curve is **estimated** from these numbers and labelled as such in the interface —
+it is not measured motor data. Average thrust × burn time must agree with the total impulse
+to within 1 %, the peak must be at least the average, and a single linear ramp cannot peak
+above twice its mean; anything inconsistent is rejected with an explanation rather than
+silently corrected. The **Set impulse = average × burn time** button is the explicit way to
+resolve a mismatch.
+
+Changing any of these values leaves the motor's diameter, length, casing mass, propellant
+mass and mounting position untouched, and the rocket's mass and geometry identical.
+
+## Flight model
+
+`rocket_sim/physics.py` integrates a single rigid body with classical RK4 at a fixed 2 ms
+step. Forces and moments:
+
+- thrust along the body axis from the sampled thrust curve, with propellant mass burned
+  linearly over the burn time;
+- gravity;
+- drag from an exponential atmosphere (scale height 8.5 km) with a simple transonic drag rise;
+- a fin normal force applied at the centre of pressure, which weathercocks the rocket into
+  its velocity vector, plus pitch damping;
+- a pad hold that releases the rocket only when thrust along the rail exceeds its weight.
+
+There is no guidance, no autopilot, no gimbal and no parachute. A flight ends at ground
+impact. `docs/PHYSICS.md` lists the equations and the assumptions behind the coefficients.
+
+## Checks
+
+```bash
+python -m rocket_sim --self-test   # headless physics checks, prints a summary and exits
+python -m pytest                   # 36 tests: config, motor validation, flight, UI smoke test
 ```
 
-The suite validates the mathematics that the application depends on — coordinate
-transforms, parallel-axis inertia, sketch and assembly constraints, CAD volumes,
-thread/insertion kinematics, servo response, sensor output, passive and guided flight,
-aerodynamics, project round-trips and reports — against closed-form or independently
-computed results rather than against saved output. `docs/ACCURACY.md` maps each claim to
-the test that proves it.
-
-## Project files
-
-Projects are `.tvcproj` JSON documents (schema-versioned, migrated on load) that embed
-part definitions, feature history, assembly hierarchy, constraints, installed fasteners,
-materials, overrides, electronics, motor data, simulation settings and results.
-
-Reusable hardware lives in a component library under `%APPDATA%\TVCStudio\library`
-(configurable), and a bundled read-only library ships with the application.
+`--self-test` reports the fixed hardware, the thrust-curve integral, the complete flight
+(apogee, maximum speed, impact time), repeatability, a low/high impulse comparison, and that
+an inconsistent motor specification is rejected.
 
 ## Packaging
 
 ```bat
-packaging\build_windows.bat
+packaging\build_windows.bat        :: onedir build in dist\
+packaging\build_macos.sh           :: .app bundle plus a ditto archive
 ```
 
-Produces `dist\TVC Engineering Studio\TVC Engineering Studio.exe` (onedir, Qt and OCCT
-DLLs collected) plus an Inno Setup script for the installer. The build is unsigned;
-Windows SmartScreen will warn until you sign it.
+`packaging/rocket_sim.spec` is the PyInstaller recipe and `packaging/installer.iss` the Inno
+Setup 6 recipe for a per-user Windows installer. `.github/workflows/build.yml` runs the
+self-test, the tests and the packaging step on Windows and macOS runners.
 
-## Documentation
+## Limitations
 
-* `docs/ARCHITECTURE.md` — subsystem map, interfaces, data flow, decisions.
-* `docs/DEPENDENCIES.md` — evaluated libraries, licences, why each was chosen.
-* `docs/ROADMAP.md` — phases and per-feature status.
-* `docs/ACCURACY.md` — what is validated, what is approximate, what is not claimed.
-* `docs/USER_GUIDE.md` — workspace-by-workspace guide.
+- One rocket, one motor, one stage; no recovery system, wind, or multi-stage modelling.
+- Aerodynamics uses textbook estimates; there is no CFD, FEA or measured aero table.
+- Estimated curves are linear profiles; measured motor files are not supported yet.
+- Without a parachute the rocket arrives at the ground at roughly 50 m/s.
 
-## Engineering honesty rules baked into the code
+## Layout
 
-* Mass properties are computed from exact B-rep geometry + material density and carry a
-  `provenance` tag (`cad_derived`, `measured`, `manufacturer`, `estimated`, `user_override`).
-  A manual override is labelled in the UI and in every report; it is never presented as derived.
-* Estimated material strength, friction, thread engagement and aerodynamic coefficients are
-  flagged as estimated wherever they influence a result.
-* Settings that do not feed a calculation do not ship (part 4.4 / rule 10).
-* Visualization is sampled from the simulation state, never animated independently (rule 11).
+```
+rocket_sim/
+  config.py     fixed rocket and motor geometry, atmosphere helpers
+  motor.py      editable performance, validation, estimated thrust curves
+  physics.py    rigid-body simulation, events, readouts
+  viewport.py   pyqtgraph OpenGL scene: rocket mesh, ground, pad, trail, camera
+  ui.py         window: viewport, motor panel, controls, live data
+  app.py        entry point and --self-test
+tests/          config, motor, flight and UI tests
+packaging/      PyInstaller spec, build scripts, Inno Setup script
+```
 
 ## Licence
 
-MIT for this application's code. Open CASCADE (LGPL-2.1 with exception), Qt/PySide6 (LGPL-3),
-NumPy/SciPy (BSD), pyqtgraph (MIT), PyOpenGL (BSD). See `docs/DEPENDENCIES.md`.
+MIT — see `LICENSE`.

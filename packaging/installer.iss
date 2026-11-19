@@ -1,16 +1,16 @@
-; Inno Setup 6 script for TVC Engineering Studio.
+; Inno Setup 6 script for Static Rocket Flight Simulator.
 ; Build the application first with packaging\build_windows.bat, then compile this file.
 ; The output is unsigned; Windows SmartScreen will warn until the binary is signed.
 
-#define AppName "TVC Engineering Studio"
+#define AppName "Static Rocket Flight Simulator"
 #define AppVersion "0.1.0"
-#define AppExe "TVC Engineering Studio.exe"
+#define AppExe "Static Rocket Flight Simulator.exe"
 
 [Setup]
-AppId={{8E2E1C1A-6F64-4C55-9E77-5B6C2F0C1A11}
+AppId={{C1F0E7B2-4A9D-4E63-9D7A-2E5A6B8F3C21}
 AppName={#AppName}
 AppVersion={#AppVersion}
-AppPublisher=TVC Engineering Studio contributors
+AppPublisher=Static Rocket Flight Simulator contributors
 AppPublisherURL=https://github.com/DVVagram/tvc-engineering-studio
 AppSupportURL=https://github.com/DVVagram/tvc-engineering-studio/issues
 AppUpdatesURL=https://github.com/DVVagram/tvc-engineering-studio/releases
@@ -19,7 +19,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist\installer
-OutputBaseFilename=TVC-Engineering-Studio-{#AppVersion}-setup
+OutputBaseFilename=Static-Rocket-Simulator-{#AppVersion}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -28,7 +28,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 CloseApplications=yes
 RestartApplications=no
-VersionInfoCompany=TVC Engineering Studio contributors
+VersionInfoCompany=Static Rocket Flight Simulator contributors
 VersionInfoDescription={#AppName} installer
 VersionInfoProductName={#AppName}
 VersionInfoProductVersion={#AppVersion}
@@ -43,7 +43,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Files]
-Source: "..\dist\TVC Engineering Studio\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\dist\Static Rocket Flight Simulator\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
