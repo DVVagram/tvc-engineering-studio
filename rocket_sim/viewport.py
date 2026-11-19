@@ -25,11 +25,12 @@ except Exception:  # pragma: no cover
 from .config import MOTOR, ROCKET, MotorConfig, RocketConfig
 from .physics import quat_matrix
 
-BODY_COLOR = (0.90, 0.93, 0.96, 1.0)
-NOSE_COLOR = (0.78, 0.30, 0.22, 1.0)
-FIN_COLOR = (0.30, 0.42, 0.56, 1.0)
-NOZZLE_COLOR = (0.18, 0.20, 0.23, 1.0)
-TRAIL_COLOR = (1.0, 0.62, 0.25, 0.85)
+BODY_COLOR = (0.93, 0.95, 0.98, 1.0)
+NOSE_COLOR = (0.86, 0.28, 0.20, 1.0)
+FIN_COLOR = (0.31, 0.52, 0.76, 1.0)
+NOZZLE_COLOR = (0.22, 0.24, 0.28, 1.0)
+PAD_COLOR = (0.30, 0.36, 0.44, 1.0)
+TRAIL_COLOR = (1.0, 0.64, 0.28, 0.6)
 
 
 def _ring(x: float, radius: float, segments: int) -> np.ndarray:
@@ -174,8 +175,34 @@ def build_rocket_mesh(rocket: RocketConfig = ROCKET,
     return (np.vstack(vertices), np.vstack(faces), np.vstack(colors))
 
 
-def build_pad_mesh(radius: float = 0.5, height: float = 0.06) -> tuple[np.ndarray, np.ndarray]:
-    return _tube(0.0, height, radius, segments=32)
+def build_ground_plane(size: float = 600.0, z: float = -0.004) -> tuple[np.ndarray, np.ndarray]:
+    """Solid ground so the rocket reads as resting on a surface, not floating."""
+    half = size / 2.0
+    vertices = np.array([
+        [-half, -half, z], [half, -half, z], [half, half, z], [-half, half, z],
+    ], dtype=float)
+    faces = np.array([[0, 1, 2], [0, 2, 3]], dtype=np.uint32)
+    return vertices, faces
+
+
+def build_pad_mesh(radius: float = 0.35, height: float = 0.05) -> tuple[np.ndarray, np.ndarray]:
+    """A short cylinder standing on the ground plane (axis along world +Z)."""
+    segments = 32
+    angles = np.linspace(0.0, 2.0 * math.pi, segments, endpoint=False)
+    bottom = np.stack([radius * np.cos(angles), radius * np.sin(angles),
+                       np.zeros(segments)], axis=1)
+    top = np.stack([radius * np.cos(angles), radius * np.sin(angles),
+                    np.full(segments, height)], axis=1)
+    vertices = np.vstack([bottom, top, [[0.0, 0.0, height]], [[0.0, 0.0, 0.0]]])
+    center_top, center_bottom = 2 * segments, 2 * segments + 1
+    faces = []
+    for i in range(segments):
+        j = (i + 1) % segments
+        faces.append([i, j, segments + j])
+        faces.append([i, segments + j, segments + i])
+        faces.append([center_top, segments + i, segments + j])
+        faces.append([center_bottom, j, i])
+    return vertices, np.array(faces, dtype=np.uint32)
 
 
 if HAVE_QT:
@@ -195,30 +222,44 @@ if HAVE_QT:
                 vertexes=self._base_vertices,
                 faces=self._faces,
                 vertexColors=self._colors,
-                smooth=True,
-                shader="shaded",
+                smooth=False,
                 glOptions="opaque",
             )
             self.addItem(self.rocket_item)
 
-            grid = gl.GLGridItem()
-            grid.setSize(60.0, 60.0, 1.0)
-            grid.setSpacing(2.0, 2.0, 2.0)
-            grid.setColor((70, 78, 90, 120))
-            self.addItem(grid)
+            plane_vertices, plane_faces = build_ground_plane()
+            self.ground_item = gl.GLMeshItem(
+                vertexes=plane_vertices,
+                faces=plane_faces,
+                color=(0.115, 0.135, 0.160, 1.0),
+                smooth=False,
+            )
+            self.addItem(self.ground_item)
+
+            # A wide ground grid keeps the launch site visible far downrange.
+            ground = gl.GLGridItem()
+            ground.setSize(600.0, 600.0, 1.0)
+            ground.setSpacing(20.0, 20.0, 20.0)
+            ground.setColor((104, 118, 136, 120))
+            self.addItem(ground)
+
+            near = gl.GLGridItem()
+            near.setSize(24.0, 24.0, 1.0)
+            near.setSpacing(1.0, 1.0, 1.0)
+            near.setColor((120, 136, 156, 150))
+            self.addItem(near)
 
             pad_vertices, pad_faces = build_pad_mesh()
             self.pad_item = gl.GLMeshItem(
                 vertexes=pad_vertices,
                 faces=pad_faces,
-                color=(0.16, 0.18, 0.21, 1.0),
+                color=PAD_COLOR,
                 smooth=False,
-                shader="shaded",
             )
             self.addItem(self.pad_item)
 
             self.trail_item = gl.GLLinePlotItem(
-                pos=np.zeros((0, 3)), color=TRAIL_COLOR, width=2.0,
+                pos=np.zeros((0, 3)), color=TRAIL_COLOR, width=1.5,
                 antialias=True, mode="line_strip",
             )
             self.addItem(self.trail_item)
@@ -233,12 +274,11 @@ if HAVE_QT:
                 vertexes=vertices,
                 faces=self._faces,
                 vertexColors=self._colors,
-                smooth=True,
-                shader="shaded",
+                smooth=False,
             )
             if self.follow:
                 self.opts["center"] = Vector(float(position[0]), float(position[1]),
-                                             float(position[2]) + 0.4)
+                                             float(position[2]) + 0.2)
             self.update()
 
         def update_trail(self, points: list[np.ndarray]) -> None:
@@ -253,8 +293,8 @@ if HAVE_QT:
         # ---------------------------------------------------------------- camera
         def reset_view(self) -> None:
             self.follow = False
-            self.setCameraPosition(pos=Vector(0.0, 0.0, 1.0), distance=8.0,
-                                   elevation=14.0, azimuth=-55.0)
+            self.setCameraPosition(pos=Vector(0.0, 0.0, 0.9), distance=5.5,
+                                   elevation=10.0, azimuth=-55.0)
 
         def set_follow(self, enabled: bool) -> None:
             self.follow = enabled

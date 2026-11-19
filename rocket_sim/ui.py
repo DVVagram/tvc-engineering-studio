@@ -79,6 +79,7 @@ class MainWindow(QtWidgets.QMainWindow):
         layout.addWidget(panel)
 
         self.setCentralWidget(central)
+        self.follow_box.setChecked(True)  # keep the vehicle in frame by default
         self._reset_readouts()
         self._update_controls()
 

@@ -32,7 +32,7 @@ from .motor import MotorPerformance, ThrustCurve
 
 FIXED_DT = 0.002
 MAX_FLIGHT_TIME = 300.0
-TRAIL_INTERVAL = 0.04
+TRAIL_INTERVAL = 0.005
 
 
 # ---------------------------------------------------------------------- quaternions
@@ -111,6 +111,7 @@ class FlightState:
 
     @property
     def altitude(self) -> float:
+        """Centre-of-gravity height; the interface reports tail height above the pad."""
         return float(self.position[2])
 
     @property
@@ -178,6 +179,7 @@ class Simulation:
         tilt = self.rocket.launch_tilt_radians
         axis = np.array([math.sin(tilt), 0.0, math.cos(tilt)])
         self.state = FlightState(
+            position=np.array([0.0, 0.0, self.rocket.tail_offset]),
             attitude=quat_from_two_vectors(np.array([1.0, 0.0, 0.0]), axis),
             mass=LAUNCH_MASS,
             thrust=self.curve.thrust_at(0.0),
@@ -239,14 +241,15 @@ class Simulation:
         mass = max(self._mass_at(time), 1e-9)
 
         speed = float(np.linalg.norm(velocity))
-        rho = air_density(float(position[2]))
+        altitude = float(position[2]) - self.rocket.tail_offset
+        rho = air_density(altitude)
         dynamic_pressure = 0.5 * rho * speed * speed
 
         force = axis * self.curve.thrust_at(time) + np.array([0.0, 0.0, -mass * G0])
         torque = np.zeros(3)
 
         if speed > 1e-9:
-            mach = speed / speed_of_sound(float(position[2]))
+            mach = speed / speed_of_sound(altitude)
             drag_coefficient = self.rocket.drag_coefficient * _mach_drag_factor(mach)
             drag = dynamic_pressure * drag_coefficient * self.rocket.reference_area
             force -= drag * (velocity / speed)
@@ -334,13 +337,13 @@ class Simulation:
             acceleration=k1[3:6],
         )
 
-        self.max_altitude = max(self.max_altitude, self.state.altitude)
+        self.max_altitude = max(self.max_altitude, self.altitude)
         self.max_speed = max(self.max_speed, self.state.speed)
 
         if (new_time - self._last_trail_time) >= TRAIL_INTERVAL:
             self.trail.append(self.state.position.copy())
             self._last_trail_time = new_time
-            if len(self.trail) > 4000:
+            if len(self.trail) > 6000:
                 del self.trail[1]
 
         if not self._burnout_logged and new_time >= self.curve.burn_time:
@@ -351,11 +354,13 @@ class Simulation:
         if self._burnout_logged and not self._apogee_logged and \
                 previous_vertical_speed > 0.0 >= self.state.vertical_speed:
             self._apogee_logged = True
-            self._log(new_time, "Apogee", f"{self.state.altitude:.1f} m")
+            self._log(new_time, "Apogee", f"{self.altitude:.1f} m")
 
-        if self.state.altitude <= 0.0 and self.state.vertical_speed < 0.0:
+        if self.altitude <= 0.0 and self.state.vertical_speed < 0.0:
             impact_speed = self.state.speed
-            self.state.position[2] = 0.0
+            self.state.position[2] -= self.altitude  # rest the lowest end on the ground
+            self.state.velocity[:] = 0.0
+            self.state.angular_velocity[:] = 0.0
             self.finished = True
             self.status = "Landed"
             self._log(new_time, "Ground impact", f"{impact_speed:.1f} m/s")
@@ -374,7 +379,11 @@ class Simulation:
     # ------------------------------------------------------------------- readouts
     @property
     def altitude(self) -> float:
-        return self.state.altitude
+        """Height of the lowest end above the pad, so a landed rocket reads 0 m."""
+        axis_z = float(self.state.body_axis[2])
+        tail = self.state.position[2] - self.rocket.tail_offset * axis_z
+        nose = self.state.position[2] + self.rocket.cg_from_nose_tip * axis_z
+        return min(tail, nose)
 
     @property
     def vertical_speed(self) -> float:

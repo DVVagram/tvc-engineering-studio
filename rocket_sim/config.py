@@ -72,6 +72,11 @@ class RocketConfig:
         return self.cg_from_nose_tip
 
     @property
+    def tail_offset(self) -> float:
+        """Distance from the centre of gravity down to the tail on the pad."""
+        return self.body_length - self.cg_from_nose_tip
+
+    @property
     def center_of_pressure_from_nose_tip(self) -> float:
         return self.cp_from_nose_tip
 

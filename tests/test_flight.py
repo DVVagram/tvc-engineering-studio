@@ -39,8 +39,10 @@ def test_events_happen_in_order() -> None:
 
 def test_ground_impact_ends_at_zero_altitude() -> None:
     simulation = _fly()
-    assert simulation.state.altitude == pytest.approx(0.0, abs=1e-9)
-    assert simulation.state.vertical_speed < 0.0
+    assert simulation.altitude == pytest.approx(0.0, abs=1e-6)
+    assert simulation.status == "Landed"
+    assert simulation.state.speed == 0.0
+    assert simulation.events[-1].name == "Ground impact"
 
 
 def test_simulation_is_repeatable() -> None:
