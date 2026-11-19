@@ -34,6 +34,15 @@ The suite tests *behaviour and closed-form results*, not saved output snapshots.
    and the mechanics workspace state this. Servo tracking accuracy is therefore bounded by
    the plant, not by a rigid-body torque balance.
 
+   In the 6-DOF flight loop the same plant is stepped each 1 ms with the instantaneous
+   thrust load, modelled as `F·e·sin δ` for a declared 1 mm nominal offset `e` between the
+   thrust axis and the servo horn (zero load at zero deflection). The driven inertia is a
+   declared assumption (`ServoSpec.output_inertia`, 2e-5 kg·m² for the default micro
+   servo: horn plus linkage and gimbal or control surface); the horn alone is too light to
+   integrate the gear-train stiffness at the flight timestep. Replace it with a measured
+   value for the real installation. Stall torque is taken from the datasheet in kg·cm and
+   converted once (1 kg·cm = 0.0980665 N·m).
+
 2. **The mechanical world is a bench fixture.** Components that no mate references are
    treated as rigidly mounted and gravity is disabled. This makes a hinge or gimbal
    testable without a full vehicle model; it is not a free-falling assembly simulation.
@@ -90,6 +99,10 @@ The suite tests *behaviour and closed-form results*, not saved output snapshots.
 
 * Flight integration: fixed-step RK4, default 1 ms (configurable). Servo and sensor models
   are sampled inside the flight loop.
+* Servo plant: the gear coupling is sub-stepped so the explicit update stays stable at the
+  flight timestep (about 8 sub-steps per 1 ms for the default MG90S); the drive torque is
+  integrated implicitly. The output-angle curve therefore has no numerical oscillation of
+  its own.
 * Mechanical dynamics: sequential-impulse solver with a 1 ms default step; joints are
   solved before position integration; servo joints are driven kinematically.
 * Constraint solving: SciPy `least_squares` with numerical Jacobians, residual tolerance

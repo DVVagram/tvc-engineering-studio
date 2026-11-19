@@ -95,10 +95,9 @@ class InstalledFastener:
         return self.depth / max(thread.advance_per_radian(), 1e-12)
 
     def set_depth(self, depth: float, thread: ThreadSpec, hole_depth: float | None = None) -> None:
-        limit = hole_depth if hole_depth is not None else self.depth
         self.depth = max(0.0, float(depth))
-        if limit is not None:
-            self.depth = min(self.depth, max(limit, 0.0) + 0.0)
+        if hole_depth is not None:
+            self.depth = min(self.depth, max(hole_depth, 0.0))
         self.installed = self.depth > 1e-6
 
     def advance(self, delta_rotation: float, thread: ThreadSpec, hole_depth: float) -> float:

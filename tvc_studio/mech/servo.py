@@ -111,15 +111,12 @@ class ServoPlant:
             return self.state
         if supply_voltage is not None:
             self.supply_voltage = supply_voltage
-        scale = spec.voltage_scale(self.supply_voltage)
-        stall_torque = spec.stall_torque * scale
-        max_speed = spec.no_load_speed * scale
 
-        # command pipeline: latency then deadband
+        # command pipeline: latency then deadband (once per user step, not per substep)
         cmd = self.state.command
         if spec.response_delay > 0:
             self._delay_buffer.append(cmd)
-            steps = int(round(spec.response_delay / dt))
+            steps = max(int(round(spec.response_delay / dt)), 1)
             if len(self._delay_buffer) > steps:
                 cmd = self._delay_buffer.pop(0)
             else:
@@ -129,81 +126,92 @@ class ServoPlant:
             cmd = self.state.applied_command
         self.state.applied_command = cmd
 
-        # motor: proportional velocity command toward the demanded angle, rate limited
-        err_m = cmd - self.state.motor_angle
-        # kp chosen so that a full-travel error commands no-load speed
-        kp = max_speed / max(spec.travel(), 1e-3)
-        target_speed = float(np.clip(kp * err_m, -max_speed, max_speed))
-        accel_limit = max(stall_torque / max(spec.inertia_at_output(), 1e-12), 1.0)
-        speed_error = target_speed - self.state.motor_speed
-        motor_speed_new = self.state.motor_speed + float(
-            np.clip(speed_error, -accel_limit * dt, accel_limit * dt)
-        )
+        # The gear train is a stiff spring between two small inertias. A 1 kHz flight step
+        # needs substeps short enough for the explicit coupling update to stay stable.
+        stiffness = max(spec.gear_stiffness, 1e-6)
+        inertia_out = max(spec.output_inertia, 1e-9)
+        inertia_motor = max(spec.inertia_at_output(), 1e-12)
+        omega = math.sqrt(stiffness * (1.0 / inertia_out + 1.0 / inertia_motor))
+        stable = 0.25 / max(omega, 1e-9)
+        count = int(min(max(math.ceil(dt / stable), 1), 200))
+        sub = dt / count
+        for _ in range(count):
+            self._advance(sub, load_torque)
+        return self.state
 
-        # gear coupling with backlash and compliance
+    def _advance(self, dt: float, load_torque: float) -> None:
+        """One stable sub-step of the motor / gear-train / output dynamics."""
+        spec = self.spec
+        state = self.state
+        scale = spec.voltage_scale(self.supply_voltage)
+        stall_torque = spec.stall_torque * scale
+        max_speed = spec.no_load_speed * scale
+        inertia_motor = max(spec.inertia_at_output(), 1e-12)
+        inertia_out = max(spec.output_inertia, 1e-9)
+
+        # position loop: a full-scale error commands no-load speed, clipped to travel rate
+        # with a ~20 ms closed-loop time constant so the horn tracks the command closely
+        err = state.applied_command - state.motor_angle
+        target_speed = float(np.clip(err / 0.020, -max_speed, max_speed))
+        # motor drive torque: speed error times the torque available per unit speed. The
+        # damping term is integrated implicitly below; on a 6e-7 kg*m^2 motor it is far too
+        # stiff for an explicit update at flight timesteps.
+        kp_torque = stall_torque / max(max_speed, 1e-9)
+
+        # gear coupling with backlash and compliance (torque motor -> output)
         gap = spec.backlash
-        delta = self.state.motor_angle - self.state.output_angle
-        coupling = 0.0
+        delta = state.motor_angle - state.output_angle
         if gap > 0:
             if delta > gap / 2.0:
                 coupling = spec.gear_stiffness * (delta - gap / 2.0)
             elif delta < -gap / 2.0:
                 coupling = spec.gear_stiffness * (delta + gap / 2.0)
-            self.state.lash_offset = float(np.clip(delta, -gap / 2.0, gap / 2.0))
+            else:
+                coupling = 0.0
+            state.lash_offset = float(np.clip(delta, -gap / 2.0, gap / 2.0))
         else:
             coupling = spec.gear_stiffness * delta
-        coupling += spec.gear_damping * (self.state.motor_speed - self.state.output_speed)
+        coupling += spec.gear_damping * (state.motor_speed - state.output_speed)
+        transmitted = float(np.clip(coupling, -stall_torque, stall_torque))
+        state.saturated = abs(transmitted) >= stall_torque - 1e-9
 
-        motor_torque = coupling / max(spec.efficiency, 1e-6)
-        motor_torque = float(np.clip(motor_torque, -stall_torque, stall_torque))
-        self.state.saturated = abs(motor_torque) >= stall_torque - 1e-9
-
-        # friction in the gear train opposes motion
-        friction = spec.gear_friction * (1.0 if self.state.motor_speed >= 0 else -1.0)
-        if abs(self.state.motor_speed) < 1e-6:
+        # friction in the gear train opposes the motor's motion
+        friction = spec.gear_friction * (1.0 if state.motor_speed >= 0 else -1.0)
+        if abs(state.motor_speed) < 1e-6:
             friction *= 0.5
 
-        # motor inertia includes reflected rotor; output inertia is the horn
-        I_motor = max(spec.inertia_at_output(), 1e-12)
-        I_out = max(spec.horn_mass * spec.horn_length ** 2 / 3.0 + 1e-9, 1e-9)
-        motor_accel = (motor_torque - friction) / I_motor
-        motor_speed_new = self.state.motor_speed + motor_accel * dt
-        # do not let the motor run away past the no-load speed after the limiter
-        motor_speed_new = float(np.clip(motor_speed_new, -max_speed * 1.05, max_speed * 1.05))
+        torque_ext = kp_torque * target_speed - transmitted / max(spec.efficiency, 1e-6) - friction
+        state.motor_speed = ((state.motor_speed + dt * torque_ext / inertia_motor)
+                             / (1.0 + dt * kp_torque / inertia_motor))
+        state.motor_speed = float(np.clip(state.motor_speed, -max_speed * 1.05, max_speed * 1.05))
+        state.motor_angle += state.motor_speed * dt
 
-        # the horn can never deliver more than stall torque, whatever the compliance says
-        delivered = float(np.clip(coupling, -stall_torque, stall_torque)) * spec.efficiency
-        out_torque = delivered - load_torque
-        output_accel = out_torque / I_out
-        output_speed_new = self.state.output_speed + output_accel * dt
-
-        self.state.motor_speed = motor_speed_new
-        self.state.motor_angle += motor_speed_new * dt
-        self.state.output_speed = output_speed_new
-        self.state.output_angle += output_speed_new * dt
+        delivered = transmitted * spec.efficiency
+        state.output_speed += (delivered - load_torque) / inertia_out * dt
+        state.output_speed = float(np.clip(state.output_speed, -max_speed * 1.5, max_speed * 1.5))
+        state.output_angle += state.output_speed * dt
 
         # stops: kill motion beyond travel, hold angle, allow stall torque to build
-        if self.state.output_angle < spec.angle_min:
-            self.state.output_angle = spec.angle_min
-            self.state.output_speed = 0.0
-            self.state.at_stop = True
-        elif self.state.output_angle > spec.angle_max:
-            self.state.output_angle = spec.angle_max
-            self.state.output_speed = 0.0
-            self.state.at_stop = True
+        if state.output_angle < spec.angle_min:
+            state.output_angle = spec.angle_min
+            state.output_speed = 0.0
+            state.at_stop = True
+        elif state.output_angle > spec.angle_max:
+            state.output_angle = spec.angle_max
+            state.output_speed = 0.0
+            state.at_stop = True
         else:
-            self.state.at_stop = False
+            state.at_stop = False
 
         # motor cannot over-wind far past the stops either (mechanical limit)
-        self.state.motor_angle = float(np.clip(
-            self.state.motor_angle,
+        state.motor_angle = float(np.clip(
+            state.motor_angle,
             spec.angle_min - max(gap, 0.01),
             spec.angle_max + max(gap, 0.01),
         ))
 
-        self.state.torque = delivered
-        self.state.current = spec.idle_current + abs(motor_torque) / max(spec.kt(), 1e-9)
-        return self.state
+        state.torque = delivered
+        state.current = spec.idle_current + abs(transmitted) / max(spec.kt(), 1e-9)
 
     # -- diagnostics -------------------------------------------------------
     def lag(self) -> float:

@@ -190,7 +190,8 @@ class CadWorkspace(Workspace):
             feature = ConeFeature(radius1=self.dim_a.value() / 2 / MM,
                                   radius2=self.dim_b.value() / 2 / MM,
                                   height=self.dim_c.value() / MM, name="Base cone")
-        material = self.material.currentText() or "pla"
+        material = self.material.currentData() or "pla"
+        created: dict[str, str] = {}
 
         def make():
             part = self.project.parts.create(name, [feature], material_id=material)
@@ -199,9 +200,14 @@ class CadWorkspace(Workspace):
             except Exception:
                 pass
             self.project.parts.invalidate(part.id)
+            created["id"] = part.id
             return part
 
         self._apply(f"Create part {name}", make)
+        part_id = created.get("id")
+        ids = list(self.project.parts.parts)
+        if part_id in ids:
+            self.part_list.setCurrentRow(ids.index(part_id))
 
     def _add_feature(self) -> None:
         part = self._selected_part()
@@ -263,9 +269,10 @@ class CadWorkspace(Workspace):
         except Exception as exc:
             QtWidgets.QMessageBox.warning(self, "Export failed", str(exc))
 
-    def _material_changed(self, name: str) -> None:
+    def _material_changed(self, _name: str = "") -> None:
         part = self._selected_part()
-        material = next((m for m in self.project.materials.all() if m.name == name), None)
+        material_id = self.material.currentData()
+        material = next((m for m in self.project.materials.all() if m.id == material_id), None)
         if part is None or material is None:
             return
 
@@ -283,7 +290,7 @@ class CadWorkspace(Workspace):
         self.main.viewport.highlight("")
         try:
             self.material.blockSignals(True)
-            index = self.material.findText(self.project.materials.get(part.material_id).name)
+            index = self.material.findData(part.material_id)
             self.material.setCurrentIndex(max(index, 0))
             self.material.blockSignals(False)
         except Exception:
@@ -306,27 +313,28 @@ class CadWorkspace(Workspace):
 
 
     def refresh(self) -> None:
-        names = [m.name for m in self.project.materials.all()]
-        current = self.material.currentText()
+        selected = self._selected_part()
+        current_part = selected.id if selected is not None else None
+        current_material = self.material.currentData()
         self.material.blockSignals(True)
         self.material.clear()
-        self.material.addItems(names)
-        if current in names:
-            self.material.setCurrentText(current)
+        for material in self.project.materials.all():
+            self.material.addItem(material.name, material.id)
+        if current_material:
+            self.material.setCurrentIndex(max(self.material.findData(current_material), 0))
         self.material.blockSignals(False)
-        self.material.blockSignals(True)
-        current_part = self._selected_part().id if self._selected_part() else None
         self.part_list.blockSignals(True)
         self.part_list.clear()
         for part in self.project.parts.parts.values():
             self.part_list.addItem(f"{part.name}")
-        self.part_list.blockSignals(False)
         ids = list(self.project.parts.parts)
         if current_part in ids:
             self.part_list.setCurrentRow(ids.index(current_part))
         elif ids:
             self.part_list.setCurrentRow(0)
-        self.material.blockSignals(False)
+        self.part_list.blockSignals(False)
+        if self.part_list.currentRow() >= 0:
+            self._part_selected()
 
 
 # ---------------------------------------------------------------------- Assembly
@@ -626,7 +634,7 @@ class FastenerWorkspace(Workspace):
 
         install_box, form = form_group("Install fastener")
         self.thread_filter = QtWidgets.QComboBox()
-        self.thread_filter.addItems(["M2", "M2.5", "M3", "M4", "M5", "M6", "8-32", "4-40"])
+        self.thread_filter.addItems(["M2", "M2.5", "M3", "M4", "M5", "M6", "#8-32", "#4-40"])
         self.thread_filter.setCurrentText("M3")
         self.fastener_combo = QtWidgets.QComboBox()
         self.depth = spin(0, 100, 6.0, 1, "mm")
@@ -716,6 +724,10 @@ class FastenerWorkspace(Workspace):
         self._apply("Remove fastener", lambda: self.project.assembly.remove_fastener(fid))
 
     def refresh(self) -> None:
+        current_fastener = self.fastener_combo.currentData()
+        self._filter_fasteners()
+        if current_fastener:
+            self.fastener_combo.setCurrentIndex(max(self.fastener_combo.findData(current_fastener), 0))
         holes = list(self.project.assembly.holes.values())
         rows = []
         for hole in holes:

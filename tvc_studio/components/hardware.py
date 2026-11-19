@@ -41,7 +41,7 @@ class ServoSpec:
     rated_voltage: float = 4.8          # V
     operating_voltage_min: float = 4.8
     operating_voltage_max: float = 6.0
-    stall_torque: float = 1.8 * 0.0980665 * 0.01  # 1.8 kg*cm in N*m
+    stall_torque: float = 1.8 * 0.0980665  # 1.8 kg*cm in N*m (1 kg*cm = 0.0980665 N*m)
     no_load_speed: float = math.radians(60.0) / 0.10  # 0.10 s/60 deg -> rad/s
     angle_min: float = math.radians(-90.0)
     angle_max: float = math.radians(90.0)
@@ -55,6 +55,10 @@ class ServoSpec:
     rotor_inertia: float = 6.0e-7       # kg*m^2 referred to the output
     horn_mass: float = 0.0015           # kg
     horn_length: float = 0.015          # m
+    #: inertia of the driven mechanism referred to the output shaft (horn, linkage and a
+    #: typical gimbal/control surface). The horn alone is far too light to integrate a stiff
+    #: gear train at flight timesteps; replace it with a measured value when known.
+    output_inertia: float = 2.0e-5      # kg*m^2
     stall_current: float = 0.70         # A at stall, rated voltage
     idle_current: float = 0.006         # A
     torque_constant: float = 0.0        # N*m/A, derived when zero
@@ -337,7 +341,7 @@ def default_servos() -> list[ServoSpec]:
             rated_voltage=4.8,
             operating_voltage_min=4.8,
             operating_voltage_max=6.0,
-            stall_torque=1.8 * 0.0980665 * 0.01,
+            stall_torque=1.8 * 0.0980665,
             no_load_speed=math.radians(60.0) / 0.10,
             angle_min=math.radians(-90.0),
             angle_max=math.radians(90.0),
@@ -366,7 +370,7 @@ def default_servos() -> list[ServoSpec]:
             rated_voltage=6.0,
             operating_voltage_min=4.8,
             operating_voltage_max=7.2,
-            stall_torque=9.4 * 0.0980665 * 0.01,
+            stall_torque=9.4 * 0.0980665,
             no_load_speed=math.radians(60.0) / 0.15,
             angle_min=math.radians(-90.0),
             angle_max=math.radians(90.0),
@@ -394,7 +398,7 @@ def default_servos() -> list[ServoSpec]:
             rated_voltage=6.8,
             operating_voltage_min=4.8,
             operating_voltage_max=8.4,
-            stall_torque=20.0 * 0.0980665 * 0.01,
+            stall_torque=20.0 * 0.0980665,
             no_load_speed=math.radians(60.0) / 0.13,
             angle_min=math.radians(-90.0),
             angle_max=math.radians(90.0),

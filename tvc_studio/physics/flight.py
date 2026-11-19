@@ -316,10 +316,16 @@ class FlightSimulator:
             return 0.0, 0.0
         pitch = self._cmd_pitch
         yaw = self._cmd_yaw
+        # The horn must hold the thrust-side load of the current deflection: a 1 mm nominal
+        # offset between the thrust axis and the servo axis gives F * e * sin(deflection).
+        # With zero deflection the load is zero, so a centred servo is not pushed off zero.
+        thrust = abs(self.state.thrust)
         if self.pitch_servo is not None:
-            pitch = self.pitch_servo.step(dt, abs(self.state.thrust) * 0.001).output_angle
+            load = thrust * 0.001 * math.sin(self.state.gimbal_pitch)
+            pitch = self.pitch_servo.step(dt, load).output_angle
         if self.yaw_servo is not None:
-            yaw = self.yaw_servo.step(dt, abs(self.state.thrust) * 0.001).output_angle
+            load = thrust * 0.001 * math.sin(self.state.gimbal_yaw)
+            yaw = self.yaw_servo.step(dt, load).output_angle
         limit = self.config.max_gimbal
         return float(np.clip(pitch, -limit, limit)), float(np.clip(yaw, -limit, limit))
 

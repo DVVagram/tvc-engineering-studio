@@ -193,6 +193,10 @@ class MainWindow(QtWidgets.QMainWindow):
         changed = self.undo.commit(self.project)
         self._dirty = True
         self.rebuild_view()
+        try:
+            self.workspaces[self.tabs.currentIndex()].refresh()
+        except Exception as exc:
+            self.set_status(f"Workspace refresh failed: {exc}")
         self.refresh_status()
         self._update_undo_actions()
         self.set_status(label if changed else f"{label}: no change")

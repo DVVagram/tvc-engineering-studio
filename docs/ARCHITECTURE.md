@@ -58,7 +58,7 @@ components and their configured properties, never from a hand-entered whole-rock
 | `fasteners.thread` | Thread profile math, helix geometry, engagement/strip/pull-out estimates | occt_backend (detailed geometry) |
 | `fasteners.install` | Installation kinematics, seating, torque model, interference checks | catalog, thread, cad |
 | `mech.dynamics` | Rigid-body world with joints, limits, friction, backlash, contact | core.math3d |
-| `mech.servo` | Servo plant: rate limit, stall torque, backlash, deadband, stops | — |
+| `mech.servo` | Servo plant: two-inertia gear model with drive, rate and stall limits, backlash, deadband, stops; stability sub-stepping | — |
 | `mech.contact` | Mesh-based narrow-phase contact and static interference analysis | core.interfaces |
 | `electronics.flightcomputer` | Control loop scheduling, sensor sampling, actuator output, logging, power | hardware |
 | `electronics.imu` | MPU6050-class measurement synthesis at the sensor's mounting pose | core.math3d |
