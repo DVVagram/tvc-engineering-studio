@@ -50,4 +50,12 @@ Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#AppExe}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#AppExe}"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent; Check: NotSilentInstall
+
+[Code]
+function NotSilentInstall: Boolean;
+begin
+  { Inno still executes postinstall entries during an unattended install unless the
+    check below is explicit, which would leave the app running after a silent setup. }
+  Result := not WizardSilent;
+end;
